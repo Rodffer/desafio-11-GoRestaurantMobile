@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Image, ScrollView } from 'react-native';
 
 import Icon from 'react-native-vector-icons/Feather';
@@ -51,15 +51,23 @@ const Dashboard: React.FC = () => {
   >();
   const [searchValue, setSearchValue] = useState('');
 
-  const navigation = useNavigation();
-
-  async function handleNavigate(id: number): Promise<void> {
-    // Navigate do ProductDetails page
-  }
+  const { navigate } = useNavigation();
 
   useEffect(() => {
     async function loadFoods(): Promise<void> {
-      // Load Foods from API
+      const response = await api.get<Food[]>('foods', {
+        params: {
+          name_like: searchValue,
+          category_like: selectedCategory,
+        },
+      });
+
+      const data = response.data.map((food: Food) => ({
+        ...food,
+        formattedPrice: formatValue(food.price),
+      }));
+
+      setFoods(data);
     }
 
     loadFoods();
@@ -67,15 +75,33 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     async function loadCategories(): Promise<void> {
-      // Load categories from API
+      const response = await api.get('categories');
+
+      setCategories(response.data);
     }
 
     loadCategories();
   }, []);
 
-  function handleSelectCategory(id: number): void {
-    // Select / deselect category
-  }
+  const handleSelectCategory = useCallback(
+    (id: number) => {
+      setSelectedCategory(selectedCategory === id ? undefined : id);
+    },
+    [selectedCategory, setSelectedCategory],
+  );
+
+  const handleNavigateToFoodDetails = useCallback(
+    (id: number) => {
+      navigate('FoodDetails', {
+        id,
+      });
+    },
+    [navigate],
+  );
+
+  const handleNavigateToHome = useCallback(() => {
+    navigate('Home');
+  }, [navigate]);
 
   return (
     <Container>
@@ -85,7 +111,7 @@ const Dashboard: React.FC = () => {
           name="log-out"
           size={24}
           color="#FFB84D"
-          onPress={() => navigation.navigate('Home')}
+          onPress={handleNavigateToHome}
         />
       </Header>
       <FilterContainer>
@@ -128,7 +154,7 @@ const Dashboard: React.FC = () => {
             {foods.map(food => (
               <Food
                 key={food.id}
-                onPress={() => handleNavigate(food.id)}
+                onPress={() => handleNavigateToFoodDetails(food.id)}
                 activeOpacity={0.6}
                 testID={`food-${food.id}`}
               >
